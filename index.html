@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, Helvetica;
+            font-size: 12px;
+            margin: 0px;
+        }
+        canvas {
+            position: absolute;
+            left: -200px;
+            top: -200px;
+        }
+        #preview {
+            width: 100%;
+            height: 100%;
+            margin-top: 16px;
+        }
+        .main {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .controls {
+            display: flex;
+            width: 100%;
+            border: 1px solid grey;
+        }
+        .section {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid grey;
+            padding: 8px;
+            width: 25%;
+        }
+    </style>
+    <script>
+        let props = {
+            lineColor: '#000000',
+            circleFillColor: '#000000',
+            lineWidth: 1,
+            drawHorizontal: true,
+            drawVertical: true,
+            horizontalGap: 40,
+            verticalGap: 30,
+            drawCircles: true,
+            circleRadius: 5,
+            strokeWidth: 2,
+            circleStrokeColor: '#ffffff'
+        }
+        let canvas, preview, styleOutput;
+
+        function init() {
+            const bkgColorPicker = document.querySelector("#bkgColorPicker");
+            bkgColorPicker.addEventListener("input", event => updateBackground(event.target.value), false);
+
+            const lineColorPicker = document.querySelector("#lineColorPicker");
+            lineColorPicker.addEventListener("input", event => updateProp('lineColor', event.target.value), false);
+
+            const circleFillColorPicker = document.querySelector("#circleFillColorPicker");
+            circleFillColorPicker.addEventListener("input", event => updateProp('circleFillColor', event.target.value), false);
+
+            const lineWidthPicker = document.querySelector("#lineWidthPicker");
+            lineWidthPicker.addEventListener("input", event => updateProp('lineWidth', event.target.value * 0.1), false);
+
+            const drawHorizontalCB = document.querySelector("#drawHorizontal");
+            drawHorizontalCB.addEventListener("input", event => updateProp('drawHorizontal', event.target.checked), false);
+
+            const drawVerticalCB = document.querySelector("#drawVertical");
+            drawVerticalCB.addEventListener("input", event => updateProp('drawVertical', event.target.checked), false);
+
+            const hGapPicker = document.querySelector("#hGapPicker");
+            hGapPicker.addEventListener("input", event => updateProp('horizontalGap', event.target.value * 0.1), false);
+
+            const vGapPicker = document.querySelector("#vGapPicker");
+            vGapPicker.addEventListener("input", event => updateProp('verticalGap', event.target.value * 0.1), false);
+
+            const drawCirclesCB = document.querySelector("#drawCircles");
+            drawCirclesCB.addEventListener("input", event => updateProp('drawCircles', event.target.checked), false);
+
+            const circleRadiusPicker = document.querySelector("#circleRadiusPicker");
+            circleRadiusPicker.addEventListener("input", event => updateProp('circleRadius', event.target.value * 0.1), false);
+
+            const strokeWidthPicker = document.querySelector("#strokeWidthPicker");
+            strokeWidthPicker.addEventListener("input", event => updateProp('strokeWidth', event.target.value * 0.1), false);
+
+            const circleStrokeColorPicker = document.querySelector("#circleStrokeColorPicker");
+            circleStrokeColorPicker.addEventListener("input", event => updateProp('circleStrokeColor', event.target.value), false);
+
+            const loadSettings = document.querySelector("#loadSettings");
+            loadSettings.addEventListener("input", event => readSettings(event.target.files), false);
+
+            canvas = document.getElementById("canvas");
+            preview = document.getElementById("preview");
+            styleOutput = document.getElementById("styleOutput");
+
+            draw();
+        }
+
+        function draw() {
+            const {horizontalGap, verticalGap, lineColor, lineWidth, drawHorizontal, drawVertical, circleFillColor, drawCircles, circleRadius, strokeWidth, circleStrokeColor} = props;
+            canvas.width = horizontalGap;
+            canvas.height = verticalGap;
+            const ctx = canvas.getContext("2d");
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = lineWidth;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (drawHorizontal) {
+                ctx.beginPath();
+                ctx.moveTo(0, verticalGap / 2);
+                ctx.lineTo(canvas.width, verticalGap / 2);
+                ctx.stroke();
+            }
+            if (drawVertical) {
+                ctx.beginPath();
+                ctx.moveTo(horizontalGap /2, 0);
+                ctx.lineTo(horizontalGap /2, canvas.height);
+                ctx.stroke();
+            }
+            if (drawCircles) {
+                drawCircle(ctx, horizontalGap /2 , verticalGap / 2, circleRadius, circleFillColor, circleStrokeColor, strokeWidth);
+            }
+            updatePreview();
+        }
+
+        function updateProp(prop, value) {
+            props[prop] = value;
+            draw();
+        }
+
+        function updateBackground(value) {
+            preview.style.backgroundColor = value;
+            updatePreview();
+        }
+
+        function updatePreview() {
+            preview.style.backgroundImage = `url(${canvas.toDataURL()})`;
+            styleOutput.innerHTML = `background-color: ${preview.style.backgroundColor};\nbackground-image: ${preview.style.backgroundImage};`;
+        }
+
+        function drawCircle(ctx, x, y, radius, fill, stroke, strokeWidth) {
+            ctx.beginPath()
+            ctx.arc(x, y, radius, 0, 2 * Math.PI, false)
+            if (fill) {
+                ctx.fillStyle = fill
+                ctx.fill()
+            }
+            if (stroke) {
+                ctx.lineWidth = strokeWidth
+                ctx.strokeStyle = stroke
+                ctx.stroke()
+            }
+        }
+
+        function copyToClipboard(){
+            styleOutput.select();
+            document.execCommand('copy');
+            styleOutput.selectionStart = styleOutput.selectionEnd;
+            styleOutput.blur();
+            setTimeout(() => {
+                styleOutput.scrollTop = 0;
+            }, 0);
+        }
+
+        function save() {
+            const data = {
+                background: preview.style.backgroundColor,
+                props
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+            const dlAnchorElem = document.getElementById('downloadAnchorElem');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "settings.json");
+            dlAnchorElem.click();
+        }
+
+        function load() {
+            const loadElem = document.getElementById('loadSettings');
+            loadElem.click();
+        }
+
+        function readSettings(files) {
+            if (files && files.length) {
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const settings = JSON.parse(reader.result);
+                    preview.style.backgroundColor = settings.background;
+                    props = settings.props;
+                    updateSettings(settings);
+                    draw();
+                }
+                reader.readAsText(file);
+            }
+            document.querySelector("#loadSettings").value = '';
+        }
+        function updateSettings(settings) {
+            document.querySelector("#bkgColorPicker").value = settings.background.startsWith('#') ? settings.background : rgbToHex(settings.background);
+            document.querySelector("#hGapPicker").value = settings.props.horizontalGap * 10;
+            document.querySelector("#vGapPicker").value = settings.props.verticalGap * 10;
+            document.querySelector("#drawHorizontal").checked = settings.props.drawHorizontal;
+            document.querySelector("#drawVertical").checked = settings.props.drawVertical;
+            document.querySelector("#lineWidthPicker").value = settings.props.lineWidth * 10;
+            document.querySelector("#lineColorPicker").value = settings.props.lineColor.startsWith('#') ? settings.props.lineColor : rgbToHex(settings.props.lineColor);
+            document.querySelector("#drawCircles").checked = settings.props.drawCircles;
+            document.querySelector("#circleRadiusPicker").value = settings.props.circleRadius * 10;
+            document.querySelector("#circleFillColorPicker").value = settings.props.circleFillColor.startsWith('#') ? settings.props.circleFillColor : rgbToHex(settings.props.circleFillColor);
+            document.querySelector("#strokeWidthPicker").value = settings.props.strokeWidth * 10;
+            document.querySelector("#circleStrokeColorPicker").value = settings.props.circleStrokeColor.startsWith('#') ? settings.props.circleStrokeColor : rgbToHex(settings.props.circleStrokeColor);
+        }
+
+        function rgbToHex(rgb) {
+            const values = rgb.substr(4, rgb.length - 5).split(',');
+            const r = parseInt(values[0]);
+            const g = parseInt(values[1]);
+            const b = parseInt(values[2]);
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        window.addEventListener("load", init, false);
+    </script>
+</head>
+<body>
+<div class="main">
+    <div class="controls">
+        <div class="section">
+            <h3>Grid</h3>
+            <div style="display: flex; padding: 8px; align-items: center">
+                <label style="margin-bottom: 2px; margin-right: 8px" for="bkgColorPicker">Background color:</label>
+                <input type="color" value="#ffffff" id="bkgColorPicker">
+            </div>
+
+            <div style="display: flex; flex-direction: column; padding: 8px">
+                <label style="margin-bottom: 2px" for="hGapPicker">Horizontal gap:</label>
+                <input style="width: 200px" type="range" min="1" max="2000" value="400" id="hGapPicker">
+            </div>
+
+            <div style="display: flex; flex-direction: column; padding: 8px">
+                <label style="margin-bottom: 2px" for="vGapPicker">Vertical gap:</label>
+                <input style="width: 200px" type="range" min="1" max="2000" value="300" id="vGapPicker">
+            </div>
+
+            <button style="width: 100px; margin-top: 12px; margin-left: 8px" onclick="load()">Load Settings</button>
+        </div>
+
+        <div class="section">
+            <h3>Lines</h3>
+            <div style="display: flex; align-items: center; padding: 4px">
+                <input type="checkbox" id="drawHorizontal" checked>
+                <label for="drawHorizontal">Draw horizontal lines</label>
+            </div>
+            <div style="display: flex; align-items: center; padding: 4px">
+                <input type="checkbox" id="drawVertical" checked>
+                <label for="drawVertical">Draw vertical lines</label>
+            </div>
+
+            <div style="display: flex; flex-direction: column; padding: 8px">
+                <label style="margin-bottom: 2px" for="lineWidthPicker">Line width:</label>
+                <input style="width: 200px" type="range" min="1" max="200" value="10" id="lineWidthPicker">
+            </div>
+
+            <div style="display: flex; padding: 8px; align-items: center">
+                <label style="margin-bottom: 2px; margin-right: 8px" for="lineColorPicker">Lines color:</label>
+                <input type="color"  value="#000000" id="lineColorPicker">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Circles</h3>
+            <div style="display: flex; align-items: center; padding: 8px">
+                <input type="checkbox" id="drawCircles" checked>
+                <label for="drawCircles">Draw circles</label>
+            </div>
+            <div style="display: flex; flex-direction: column; padding: 8px">
+                <label style="margin-bottom: 2px" for="circleRadiusPicker">Circle radius:</label>
+                <input style="width: 200px" type="range" min="1" max="200" value="50" id="circleRadiusPicker">
+            </div>
+
+            <div style="display: flex; padding: 8px; align-items: center">
+                <label style="margin-bottom: 2px; margin-right: 8px" for="circleFillColorPicker">Circle fill color:</label>
+                <input type="color" value="#000000" id="circleFillColorPicker">
+            </div>
+
+            <div style="display: flex; flex-direction: column; padding: 8px">
+                <label style="margin-bottom: 2px" for="strokeWidthPicker">Circle stroke width:</label>
+                <input style="width: 200px" type="range" min="1" max="200" value="20" id="strokeWidthPicker">
+            </div>
+
+            <div style="display: flex; padding: 8px; align-items: center">
+                <label style="margin-bottom: 2px; margin-right: 8px" for="circleStrokeColorPicker">Circle stroke color:</label>
+                <input type="color" value="#ffffff" id="circleStrokeColorPicker">
+            </div>
+        </div>
+
+        <div class="section" style="border-right: none">
+            <div style="width: 308px; display: flex; align-items: center">
+                <h3>Output</h3>
+                <button style="margin-left: auto" onclick="copyToClipboard()">Copy</button>
+            </div>
+            <textarea id="styleOutput" style="width: 300px; height: 160px; margin-left: 4px" readonly></textarea>
+            <button style="width: 100px; margin-top: 16px; margin-left: 4px" onclick="save()">Save Settings</button>
+        </div>
+    </div>
+    <div id="preview" style="background-color: #ffffff"></div>
+</div>
+<!-- Hidden elements -->
+<canvas id="canvas"></canvas>
+<a id="downloadAnchorElem" style="display:none"></a>
+<input type="file" id="loadSettings" accept="application/json" style="display: none">
+</body>
+</html>
